@@ -7,6 +7,7 @@ import NewsCard from '@/components/NewsCard'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { fetchCountryNews } from '@/lib/newsApi'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { navigateTo } from '@/lib/navigation'
 
 interface NewsArticle {
   title: string
@@ -56,7 +57,7 @@ export default function CountryNewsPage() {
       <LanguageSwitcher />
       <div className="max-w-6xl mx-auto">
         <button
-          onClick={() => router.push('/')}
+          onClick={() => navigateTo('/')}
           className="mb-6 flex items-center gap-2 text-gray-700 hover:text-morning-accent transition-colors"
         >
           <ArrowLeft size={20} />

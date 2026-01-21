@@ -6,7 +6,7 @@ export function generateStaticParams() {
   // Get all country codes from translations
   const countryCodes = Object.keys(countryNames.en)
   return countryCodes.map((code) => ({
-    code: code.toLowerCase(),
+    code: code, // Keep uppercase to match navigation
   }))
 }
 

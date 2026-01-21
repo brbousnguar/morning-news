@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { navigateTo } from '@/lib/navigation'
 
 const WorldMap = dynamic(() => import('@/components/WorldMap'), {
   ssr: false,
@@ -16,7 +17,8 @@ export default function Home() {
   const handleCountryClick = (countryCode: string) => {
     console.log('handleCountryClick called with:', countryCode)
     if (countryCode) {
-      router.push(`/country/${countryCode}`)
+      // Use helper function to ensure basePath is respected in static export
+      navigateTo(`/country/${countryCode}`)
     }
   }
 
