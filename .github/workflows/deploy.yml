@@ -37,6 +37,9 @@ jobs:
           ASSET_PREFIX: /${{ github.event.repository.name }}
         run: npm run build
 
+      - name: Create .nojekyll file
+        run: touch out/.nojekyll
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
