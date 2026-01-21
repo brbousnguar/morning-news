@@ -30,17 +30,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const t = (key: string): string => {
     const keys = key.split('.')
-    // @ts-ignore - dynamic access
-    let value = translations[language]
+    let value: any = translations[language]
     for (const k of keys) {
-      value = value?.[k]
+      value = value?.[k as keyof typeof value]
     }
-    return value || key
+    return (typeof value === 'string' ? value : key) as string
   }
 
   const getCountryName = (code: string): string => {
-    // @ts-ignore - dynamic access
-    return countryNames[language][code] || code
+    return countryNames[language]?.[code] || code
   }
 
   return (
