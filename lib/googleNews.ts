@@ -1,10 +1,52 @@
-import Parser from 'rss-parser'
-
-const parser = new Parser({
-  customFields: {
-    item: ['media:content', 'media:thumbnail'],
-  },
-})
+// Browser-compatible RSS parser using fetch and DOMParser
+async function parseRSSFeed(url: string): Promise<any> {
+  try {
+    // Use a CORS proxy for Google News RSS (since Google News RSS doesn't allow direct CORS)
+    // Note: In production, you might want to use your own proxy or a service like allorigins.win
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+    
+    const response = await fetch(proxyUrl)
+    const data = await response.json()
+    
+    if (!data.contents) {
+      throw new Error('No RSS content received')
+    }
+    
+    // Parse XML using DOMParser
+    const parser = new DOMParser()
+    const xmlDoc = parser.parseFromString(data.contents, 'text/xml')
+    
+    // Check for parsing errors
+    const parseError = xmlDoc.querySelector('parsererror')
+    if (parseError) {
+      throw new Error('Failed to parse RSS feed')
+    }
+    
+    // Extract items
+    const items = Array.from(xmlDoc.querySelectorAll('item')).map(item => {
+      const title = item.querySelector('title')?.textContent || ''
+      const link = item.querySelector('link')?.textContent || ''
+      const pubDate = item.querySelector('pubDate')?.textContent || ''
+      const description = item.querySelector('description')?.textContent || ''
+      const content = item.querySelector('content\\:encoded')?.textContent || description
+      const contentSnippet = description.replace(/<[^>]*>/g, '').substring(0, 200)
+      
+      return {
+        title,
+        link,
+        pubDate,
+        description,
+        content,
+        contentSnippet,
+      }
+    })
+    
+    return { items }
+  } catch (error) {
+    console.error('Error parsing RSS feed:', error)
+    throw error
+  }
+}
 
 interface GoogleNewsArticle {
   title: string
@@ -155,7 +197,7 @@ export async function fetchGoogleNews(countryName: string, language: string = 'e
 
     console.log(`Fetching Google News RSS: ${rssUrl}`)
     
-    const feed = await parser.parseURL(rssUrl)
+    const feed = await parseRSSFeed(rssUrl)
 
     if (!feed.items || feed.items.length === 0) {
       return []

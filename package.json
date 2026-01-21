@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "export": "next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -15,7 +16,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-simple-maps": "^3.0.0",
-    "rss-parser": "^3.13.0",
     "zustand": "^4.4.0"
   },
   "devDependencies": {

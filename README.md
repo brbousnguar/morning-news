@@ -70,12 +70,61 @@ morning-news/
 - **react-simple-maps** - Interactive map component
 - **Lucide React** - Icons
 
+## Deployment to GitHub Pages
+
+This app is configured for static export and can be deployed to GitHub Pages.
+
+### Important Notes
+
+⚠️ **API Key Security**: The NewsAPI key is currently hardcoded in `lib/newsApi.ts` and will be exposed in the browser when deployed. For production, consider:
+- Using environment variables (though they'll still be exposed in static builds)
+- Using a proxy service to hide your API key
+- Rotating your API key regularly
+
+### Deployment Steps
+
+1. **Push your code to GitHub**:
+   ```bash
+   git add .
+   git commit -m "Configure for GitHub Pages"
+   git push origin main
+   ```
+
+2. **Enable GitHub Pages**:
+   - Go to your repository on GitHub
+   - Navigate to **Settings** → **Pages**
+   - Under **Source**, select **GitHub Actions**
+   - Save the settings
+
+3. **Configure Base Path** (if needed):
+   - If your repository is at `github.com/username/morning-news`, the app will automatically use `/morning-news` as the base path
+   - To customize, update the `BASE_PATH` environment variable in `.github/workflows/deploy.yml`
+   - Or set it in `next.config.js` directly
+
+4. **Automatic Deployment**:
+   - The GitHub Actions workflow will automatically build and deploy your app on every push to `main`
+   - Your site will be available at `https://username.github.io/morning-news/`
+
+### Manual Build (for testing)
+
+To test the static export locally:
+
+```bash
+npm run build
+```
+
+The static files will be in the `out` directory. You can serve them with any static file server:
+
+```bash
+npx serve out
+```
+
 ## Notes
 
-- Currently uses mock data for demonstration
-- To use real news data, configure NewsAPI key in `.env.local`
 - The app filters for positive news and excludes negative content
 - News articles are categorized automatically based on content
+- Uses client-side caching (localStorage) to reduce API calls
+- Falls back to Google News RSS if NewsAPI rate limit is reached
 
 ## License
 
