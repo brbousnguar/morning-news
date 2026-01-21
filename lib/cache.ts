@@ -52,3 +52,14 @@ export function setCache(key: string, data: any): void {
 export function clearCache(): void {
   cache.clear()
 }
+
+export function clearCacheForCountry(countryCode: string, language: string): void {
+  const key = getCacheKey(countryCode, language)
+  cache.delete(key)
+  console.log(`Cleared cache for ${countryCode} (${language})`)
+}
+
+export function clearAllCache(): void {
+  cache.clear()
+  console.log('Cleared all cache')
+}

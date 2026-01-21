@@ -252,6 +252,33 @@ function getCachedClientData(countryCode: string, language: string): NewsArticle
       return null
     }
     
+    // Check if cached data is mock data or incorrect (has example.com URLs or wrong country) - clear it
+    if (data && Array.isArray(data) && data.length > 0) {
+      const isMockData = data.some((article: any) => 
+        article.url && article.url.includes('example.com')
+      )
+      
+      // Special check for Israel - if we see Illinois-related articles, clear cache
+      if (countryCode === 'IL') {
+        const hasIllinoisNews = data.some((article: any) => {
+          const text = `${article.title} ${article.description}`.toLowerCase()
+          return text.includes('illinois') || text.includes('chicago') || text.includes('springfield')
+        })
+        
+        if (hasIllinoisNews) {
+          console.log(`Clearing incorrect Illinois data from cache for Israel (IL)`)
+          localStorage.removeItem(cacheKey)
+          return null
+        }
+      }
+      
+      if (isMockData) {
+        console.log(`Clearing mock data from client cache for ${countryCode}`)
+        localStorage.removeItem(cacheKey)
+        return null
+      }
+    }
+    
     return data
   } catch {
     return null
@@ -287,13 +314,11 @@ export async function fetchCountryNews(countryCode: string, language: string = '
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       
-      // Check if it's a rate limit error
+      // Check if it's a rate limit error - Google News fallback is handled server-side
       if (response.status === 429 || errorData.error === 'RATE_LIMITED') {
-        console.warn('NewsAPI rate limit reached. Using mock data.')
-        // Fallback to mock data when rate limited
-        const mockData = await fetchMockNews(countryCode)
-        setCachedClientData(countryCode, language, mockData) // Cache mock data too
-        return mockData
+        console.warn('NewsAPI rate limit reached. Server will try Google News RSS.')
+        // Return empty array - the server will try Google News, or we'll get cached data
+        return []
       }
       
       throw new Error(`API responded with status ${response.status}`)
@@ -302,38 +327,23 @@ export async function fetchCountryNews(countryCode: string, language: string = '
     const data = await response.json()
 
     if (data && Array.isArray(data)) {
-      // If French is selected and we have no articles, return empty array (don't fallback to English mock)
-      if (language === 'fr' && data.length === 0) {
-        console.log('No French articles found, returning empty array')
-        setCachedClientData(countryCode, language, []) // Cache empty result
-        return []
-      }
-      
+      // If we have articles, cache and return them
       if (data.length > 0) {
-        setCachedClientData(countryCode, language, data) // Cache successful results
+        setCachedClientData(countryCode, language, data)
         return data as NewsArticle[]
       }
+      
+      // If no articles, don't cache empty array - let it try again or use Google News
+      // The server-side will handle Google News fallback
+      console.log('No articles from API, server should try Google News fallback')
+      return []
     }
 
-    // Only fallback to mock data if English is selected
-    if (language === 'en') {
-      const mockData = await fetchMockNews(countryCode)
-      setCachedClientData(countryCode, language, mockData)
-      return mockData
-    }
-    
-    // For French, return empty array if no articles found
-    setCachedClientData(countryCode, language, [])
+    // If response is not an array, return empty (server will handle fallback)
     return []
   } catch (error) {
     console.error('Error fetching news:', error)
-    // Only fallback to mock data if English is selected
-    if (language === 'en') {
-      const mockData = await fetchMockNews(countryCode)
-      setCachedClientData(countryCode, language, mockData)
-      return mockData
-    }
-    setCachedClientData(countryCode, language, [])
+    // Don't fallback to mock data - let server handle Google News fallback
     return []
   }
 }

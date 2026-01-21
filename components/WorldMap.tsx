@@ -1,7 +1,8 @@
 'use client'
 
-import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
+import { ComposableMap, Geographies, Geography, ZoomableGroup } from 'react-simple-maps'
 import { useState } from 'react'
+import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 
 // Use a geography file with proper ISO codes
 // This one has ISO_A2 codes in properties
@@ -194,9 +195,37 @@ function getCountryCode(geo: any): string | null {
 
 export default function WorldMap({ onCountryClick }: WorldMapProps) {
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null)
+  const [position, setPosition] = useState({ coordinates: [2, 46] as [number, number], zoom: 1 })
 
   // Focus countries: France and Morocco
   const focusCountries = ['FR', 'MA']
+
+  const handleMoveEnd = (position: any) => {
+    if (position) {
+      setPosition({
+        coordinates: position.coordinates || [2, 46],
+        zoom: position.zoom || 1,
+      })
+    }
+  }
+
+  const handleZoomIn = () => {
+    setPosition((prev) => ({
+      ...prev,
+      zoom: Math.min((prev.zoom || 1) * 1.5, 8),
+    }))
+  }
+
+  const handleZoomOut = () => {
+    setPosition((prev) => ({
+      ...prev,
+      zoom: Math.max((prev.zoom || 1) / 1.5, 1),
+    }))
+  }
+
+  const handleReset = () => {
+    setPosition({ coordinates: [2, 46], zoom: 1 })
+  }
 
   const handleCountryClick = (geo: any) => {
     const countryCode = getCountryCode(geo)
@@ -224,7 +253,35 @@ export default function WorldMap({ onCountryClick }: WorldMapProps) {
   }
 
   return (
-    <div className="map-container">
+    <div className="map-container relative">
+      {/* Zoom Controls */}
+      <div className="absolute bottom-6 right-6 z-20 flex flex-col gap-2">
+        <button
+          onClick={handleZoomIn}
+          className="bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-md hover:shadow-lg transition-all hover:bg-white border border-gray-200"
+          aria-label="Zoom in"
+          title="Zoom in"
+        >
+          <ZoomIn size={20} className="text-gray-700" />
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-md hover:shadow-lg transition-all hover:bg-white border border-gray-200"
+          aria-label="Zoom out"
+          title="Zoom out"
+        >
+          <ZoomOut size={20} className="text-gray-700" />
+        </button>
+        <button
+          onClick={handleReset}
+          className="bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-md hover:shadow-lg transition-all hover:bg-white border border-gray-200"
+          aria-label="Reset zoom"
+          title="Reset view"
+        >
+          <RotateCcw size={20} className="text-gray-700" />
+        </button>
+      </div>
+
       <ComposableMap
         projectionConfig={{
           scale: 147,
@@ -232,7 +289,12 @@ export default function WorldMap({ onCountryClick }: WorldMapProps) {
         }}
         style={{ width: '100%', height: '100%' }}
       >
-        <Geographies geography={geoUrl}>
+        <ZoomableGroup
+          zoom={position.zoom}
+          center={position.coordinates}
+          onMoveEnd={handleMoveEnd}
+        >
+          <Geographies geography={geoUrl}>
           {({ geographies }) =>
             geographies.map((geo) => {
               const countryCode = getCountryCode(geo)
@@ -278,6 +340,7 @@ export default function WorldMap({ onCountryClick }: WorldMapProps) {
             })
           }
         </Geographies>
+        </ZoomableGroup>
       </ComposableMap>
     </div>
   )
