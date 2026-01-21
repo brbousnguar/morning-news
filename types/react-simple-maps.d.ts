@@ -35,10 +35,19 @@ declare module 'react-simple-maps' {
     children?: (params: { geographies: Geography[] }) => ReactNode
   }
 
+  export interface GeographyStyleStates {
+    default?: CSSProperties
+    hover?: CSSProperties
+    pressed?: CSSProperties
+  }
+
   export interface GeographyProps {
     geography: Geography
-    style?: CSSProperties | ((geography: Geography) => CSSProperties)
+    style?: CSSProperties | GeographyStyleStates | ((geography: Geography) => CSSProperties | GeographyStyleStates)
     className?: string
+    fill?: string
+    stroke?: string
+    strokeWidth?: number
     onMouseEnter?: (event: any, geography: Geography) => void
     onMouseLeave?: (event: any, geography: Geography) => void
     onMouseDown?: (event: any, geography: Geography) => void
