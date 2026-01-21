@@ -407,28 +407,86 @@ export async function fetchCountryNews(countryCode: string, language: string = '
     const allArticles: any[] = []
 
     if (newsLanguage === 'fr') {
-      // Use French domains for French news
-      const domains = FRENCH_DOMAINS.slice(0, 5).join(',')
-      const query = countryName
+      // NewsAPI free tier only supports /top-headlines, not /everything
+      // Map country code to ISO 3166-1 alpha-2 code for NewsAPI
+      const countryCodeMap: { [key: string]: string } = {
+        'france': 'fr',
+        'morocco': 'ma',
+        'united states': 'us',
+        'united kingdom': 'gb',
+        'germany': 'de',
+        'spain': 'es',
+        'italy': 'it',
+        'portugal': 'pt',
+        'belgium': 'be',
+        'netherlands': 'nl',
+        'switzerland': 'ch',
+        'austria': 'at',
+        'canada': 'ca',
+        'australia': 'au',
+        'japan': 'jp',
+        'china': 'cn',
+        'india': 'in',
+        'brazil': 'br',
+        'mexico': 'mx',
+        'argentina': 'ar',
+        'egypt': 'eg',
+        'south africa': 'za',
+        'nigeria': 'ng',
+        'kenya': 'ke',
+        'israel': 'il',
+        'russia': 'ru',
+        'turkey': 'tr',
+        'saudi arabia': 'sa',
+        'united arab emirates': 'ae',
+        'iraq': 'iq',
+        'iran': 'ir',
+        'pakistan': 'pk',
+        'bangladesh': 'bd',
+        'vietnam': 'vn',
+        'thailand': 'th',
+        'indonesia': 'id',
+        'philippines': 'ph',
+        'malaysia': 'my',
+        'singapore': 'sg',
+        'new zealand': 'nz',
+        'south korea': 'kr',
+        'norway': 'no',
+        'sweden': 'se',
+        'denmark': 'dk',
+        'finland': 'fi',
+        'poland': 'pl',
+        'greece': 'gr',
+        'ireland': 'ie',
+        'czech republic': 'cz',
+        'romania': 'ro',
+        'hungary': 'hu',
+        'slovakia': 'sk',
+      }
       
-      // Filter by date - only show articles from last 7 days
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      const fromDate = sevenDaysAgo.toISOString().split('T')[0]
-
+      const apiCountryCode = countryCodeMap[countryName.toLowerCase()] || countryCode.toLowerCase()
+      
       try {
         const params: any = {
-          q: query,
+          country: apiCountryCode,
           language: 'fr',
-          domains: domains,
-          sortBy: 'publishedAt',
           pageSize: 50,
-          from: fromDate,
           apiKey: NEWS_API_KEY,
         }
 
-        const response = await axios.get('https://newsapi.org/v2/everything', {
+        const response = await axios.get('https://newsapi.org/v2/top-headlines', {
           params,
+        }).catch((error: any) => {
+          // Handle 426 Upgrade Required (free tier limitation)
+          if (error.response?.status === 426) {
+            console.warn('NewsAPI 426: Free tier limitation. Falling back to Google News.')
+            throw new Error('UPGRADE_REQUIRED')
+          }
+          // Handle rate limiting
+          if (error.response?.status === 429) {
+            throw new Error('RATE_LIMITED')
+          }
+          throw error
         })
 
         if (response.data.status === 'error') {
@@ -436,37 +494,100 @@ export async function fetchCountryNews(countryCode: string, language: string = '
           if (response.data.code === 'rateLimited') {
             throw new Error('RATE_LIMITED')
           }
+          if (response.data.code === 'upgradeRequired') {
+            throw new Error('UPGRADE_REQUIRED')
+          }
         }
 
         if (response.data.articles) {
           allArticles.push(...response.data.articles)
         }
       } catch (error: any) {
-        if (error.message === 'RATE_LIMITED') {
+        if (error.message === 'RATE_LIMITED' || error.message === 'UPGRADE_REQUIRED') {
           throw error
         }
         console.error(`Error fetching French news:`, error.message)
       }
     } else {
-      // English news
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      const fromDate = sevenDaysAgo.toISOString().split('T')[0]
+      // English news - use /top-headlines for free tier
+      const countryCodeMap: { [key: string]: string } = {
+        'france': 'fr',
+        'morocco': 'ma',
+        'united states': 'us',
+        'united kingdom': 'gb',
+        'germany': 'de',
+        'spain': 'es',
+        'italy': 'it',
+        'portugal': 'pt',
+        'belgium': 'be',
+        'netherlands': 'nl',
+        'switzerland': 'ch',
+        'austria': 'at',
+        'canada': 'ca',
+        'australia': 'au',
+        'japan': 'jp',
+        'china': 'cn',
+        'india': 'in',
+        'brazil': 'br',
+        'mexico': 'mx',
+        'argentina': 'ar',
+        'egypt': 'eg',
+        'south africa': 'za',
+        'nigeria': 'ng',
+        'kenya': 'ke',
+        'israel': 'il',
+        'russia': 'ru',
+        'turkey': 'tr',
+        'saudi arabia': 'sa',
+        'united arab emirates': 'ae',
+        'iraq': 'iq',
+        'iran': 'ir',
+        'pakistan': 'pk',
+        'bangladesh': 'bd',
+        'vietnam': 'vn',
+        'thailand': 'th',
+        'indonesia': 'id',
+        'philippines': 'ph',
+        'malaysia': 'my',
+        'singapore': 'sg',
+        'new zealand': 'nz',
+        'south korea': 'kr',
+        'norway': 'no',
+        'sweden': 'se',
+        'denmark': 'dk',
+        'finland': 'fi',
+        'poland': 'pl',
+        'greece': 'gr',
+        'ireland': 'ie',
+        'czech republic': 'cz',
+        'romania': 'ro',
+        'hungary': 'hu',
+        'slovakia': 'sk',
+      }
       
-      const query = `${countryName} AND (technology OR innovation OR startup OR environment OR climate OR renewable OR culture OR art OR music OR festival OR politics OR government OR history OR archaeology OR discovery OR mulesoft OR "sap commerce" OR "french tech")`
+      const apiCountryCode = countryCodeMap[countryName.toLowerCase()] || countryCode.toLowerCase()
       
       try {
         const params: any = {
-          q: query,
+          country: apiCountryCode,
           language: 'en',
-          sortBy: 'publishedAt',
           pageSize: 50,
-          from: fromDate,
           apiKey: NEWS_API_KEY,
         }
 
-        const response = await axios.get('https://newsapi.org/v2/everything', {
+        const response = await axios.get('https://newsapi.org/v2/top-headlines', {
           params,
+        }).catch((error: any) => {
+          // Handle 426 Upgrade Required (free tier limitation)
+          if (error.response?.status === 426) {
+            console.warn('NewsAPI 426: Free tier limitation. Falling back to Google News.')
+            throw new Error('UPGRADE_REQUIRED')
+          }
+          // Handle rate limiting
+          if (error.response?.status === 429) {
+            throw new Error('RATE_LIMITED')
+          }
+          throw error
         })
 
         if (response.data.status === 'error') {
@@ -474,13 +595,16 @@ export async function fetchCountryNews(countryCode: string, language: string = '
           if (response.data.code === 'rateLimited') {
             throw new Error('RATE_LIMITED')
           }
+          if (response.data.code === 'upgradeRequired') {
+            throw new Error('UPGRADE_REQUIRED')
+          }
         }
 
         if (response.data.articles) {
           allArticles.push(...response.data.articles)
         }
       } catch (error: any) {
-        if (error.message === 'RATE_LIMITED') {
+        if (error.message === 'RATE_LIMITED' || error.message === 'UPGRADE_REQUIRED') {
           throw error
         }
         console.error(`Error fetching news:`, error.message)
@@ -610,9 +734,9 @@ export async function fetchCountryNews(countryCode: string, language: string = '
   } catch (error: any) {
     console.error('Error fetching news:', error.message)
     
-    if (error.message === 'RATE_LIMITED') {
-      // Fallback to Google News RSS when NewsAPI is rate-limited
-      console.log('NewsAPI rate limited, falling back to Google News RSS...')
+    if (error.message === 'RATE_LIMITED' || error.message === 'UPGRADE_REQUIRED') {
+      // Fallback to Google News RSS when NewsAPI is rate-limited or requires upgrade
+      console.log(`NewsAPI ${error.message === 'UPGRADE_REQUIRED' ? 'requires upgrade' : 'rate limited'}, falling back to Google News RSS...`)
       try {
         const googleNewsArticles = await fetchGoogleNews(countryName, newsLanguage)
         

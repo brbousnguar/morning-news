@@ -1,47 +1,85 @@
 // Browser-compatible RSS parser using fetch and DOMParser
 async function parseRSSFeed(url: string): Promise<any> {
   try {
-    // Use a CORS proxy for Google News RSS (since Google News RSS doesn't allow direct CORS)
-    // Note: In production, you might want to use your own proxy or a service like allorigins.win
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+    // Try multiple CORS proxies as fallback
+    const proxies = [
+      `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+      `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    ]
     
-    const response = await fetch(proxyUrl)
-    const data = await response.json()
+    let lastError: Error | null = null
     
-    if (!data.contents) {
-      throw new Error('No RSS content received')
-    }
-    
-    // Parse XML using DOMParser
-    const parser = new DOMParser()
-    const xmlDoc = parser.parseFromString(data.contents, 'text/xml')
-    
-    // Check for parsing errors
-    const parseError = xmlDoc.querySelector('parsererror')
-    if (parseError) {
-      throw new Error('Failed to parse RSS feed')
-    }
-    
-    // Extract items
-    const items = Array.from(xmlDoc.querySelectorAll('item')).map(item => {
-      const title = item.querySelector('title')?.textContent || ''
-      const link = item.querySelector('link')?.textContent || ''
-      const pubDate = item.querySelector('pubDate')?.textContent || ''
-      const description = item.querySelector('description')?.textContent || ''
-      const content = item.querySelector('content\\:encoded')?.textContent || description
-      const contentSnippet = description.replace(/<[^>]*>/g, '').substring(0, 200)
-      
-      return {
-        title,
-        link,
-        pubDate,
-        description,
-        content,
-        contentSnippet,
+    for (const proxyUrl of proxies) {
+      try {
+        const response = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+        })
+        
+        if (!response.ok) {
+          throw new Error(`Proxy returned ${response.status}`)
+        }
+        
+        const data = await response.json()
+        
+        // Handle different proxy response formats
+        let xmlContent: string
+        if (data.contents) {
+          xmlContent = data.contents
+        } else if (data.content) {
+          xmlContent = data.content
+        } else if (typeof data === 'string') {
+          xmlContent = data
+        } else {
+          throw new Error('Unexpected proxy response format')
+        }
+        
+        if (!xmlContent) {
+          throw new Error('No RSS content received')
+        }
+        
+        // Parse XML using DOMParser
+        const parser = new DOMParser()
+        const xmlDoc = parser.parseFromString(xmlContent, 'text/xml')
+        
+        // Check for parsing errors
+        const parseError = xmlDoc.querySelector('parsererror')
+        if (parseError) {
+          throw new Error('Failed to parse RSS feed')
+        }
+        
+        // Extract items
+        const items = Array.from(xmlDoc.querySelectorAll('item')).map(item => {
+          const title = item.querySelector('title')?.textContent || ''
+          const link = item.querySelector('link')?.textContent || ''
+          const pubDate = item.querySelector('pubDate')?.textContent || ''
+          const description = item.querySelector('description')?.textContent || ''
+          const content = item.querySelector('content\\:encoded')?.textContent || description
+          const contentSnippet = description.replace(/<[^>]*>/g, '').substring(0, 200)
+          
+          return {
+            title,
+            link,
+            pubDate,
+            description,
+            content,
+            contentSnippet,
+          }
+        })
+        
+        return { items }
+      } catch (error) {
+        lastError = error as Error
+        console.warn(`Proxy ${proxyUrl} failed:`, error)
+        continue // Try next proxy
       }
-    })
+    }
     
-    return { items }
+    // If all proxies failed, throw the last error
+    throw lastError || new Error('All CORS proxies failed')
   } catch (error) {
     console.error('Error parsing RSS feed:', error)
     throw error
